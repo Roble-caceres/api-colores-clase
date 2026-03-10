@@ -4,8 +4,10 @@ import dotenv from 'dotenv';//“Voy a usar dotenv para cargar las variables de 
 dotenv.config();//“Carga las variables de entorno desde el archivo .env y las hace disponibles en process.env.”
 //-----------
 import express from 'express';//“Voy a usar Express para crear un servidor”.
-import cors from 'cors';//“Voy a usar CORS para permitir que el frontend (que corre en otro puerto) pueda comunicarse con este servidor sin problemas de seguridad.”    
-import {leerColores,crearColor,borrarColor,actualizarColor} from "./db.js";//“Voy a usar estas cuatro funciones que están en el archivo db.js para interactuar con la base de datos”.
+import cors from 'cors';//“Voy a usar CORS para permitir que el frontend (que corre en otro puerto) pueda comunicarse con este servidor sin problemas de seguridad.” 
+import bcrypt from "bcrypt";//“Voy a usar bcrypt para encriptar las contraseñas de los usuarios antes de guardarlas en la base de datos, y para comparar las contraseñas cuando los usuarios intenten iniciar sesión.”  
+import jwt from "jsonwebtoken";//“Voy a usar jsonwebtoken para crear tokens de autenticación que el frontend pueda usar para acceder a rutas protegidas en el backend.”
+import {leerColores,crearColor,borrarColor,actualizarColor,buscarUsuario} from "./db.js";//“Voy a usar estas cuatro funciones que están en el archivo db.js para interactuar con la base de datos”.
 
 function verificar(peticion,respuesta,siguiente) {
     respuesta.sendStatus(403);//prohibido, no autorizado
@@ -20,8 +22,30 @@ servidor.use( express.json());//esto convierte tenxo json que viene del front en
 //servidor.use( express.static("./front"));
 
 servidor.post("/login", async (peticion,respuesta) => {
-    respuesta.send("...a validar")
+    let {usuario,password} = peticion.body;
 
+    if(!usuario || !usuario.trim() || !password || !password.trim()){
+        return respuesta.status(403);
+    }
+    try{
+        let posibleUsuario = await buscarUsuario(usuario);
+
+        if(!posibleUsuario){
+            return respuesta.sendStatus(403);
+        }
+        let coincide = await bcrypt.compare(password,posibleUsuario.password);
+
+        if(!coincide){
+           return respuesta.sendStatus(401);
+        }
+        let token = jwt.sign({ id:posibleUsuario._id },process.env.SECRET);
+
+        respuesta.json({token});
+
+    } catch(e) {
+        respuesta.status(500);
+        respuesta.json({ error: "error en el servidor" });
+    }
 });
 servidor.use(verificar);
 

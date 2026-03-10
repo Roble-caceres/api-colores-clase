@@ -16,6 +16,31 @@ const urlMongo = process.env.MONGO_URL;//“La URL de conexión a MongoDB la gua
 function conectar() {//aqui solo defino la funcion,no ejecuto nada
      return MongoClient.connect(urlMongo);// Función que intenta conectar con la base de datos MongoDB usando la URL. Devuelve una promesa que, cuando se resuelve, contiene la conexión.
 }
+//usuarios
+export function buscarUsuario(nombreUsuario) {
+    return new Promise( (ok, ko) => {
+        let conexion = null;
+         conectar()
+        .then( ObjConexion => {
+            conexion = ObjConexion;
+                             
+            let coleccion = conexion.db("colores").collection("usuarios");
+
+            return coleccion.findOne({ usuario : nombreUsuario });
+        })
+        .then( usuario => {
+            ok(usuario);
+        })
+        .catch(() => ko({ error: "error en bbdd" }))
+        .finally(() => {
+            if (conexion) {
+                conexion.close();
+            }
+        });
+    });
+}
+//colores
+
 //leerColores obtiene todos los colores guardados en la base de datos y los devuelve al backend.
 export function leerColores() {//leercolores esta conectada con index.js
     return new Promise( (ok, ko) => {//lo que reciba de esta promesa lo devuelve a await leerColores de index.js
@@ -110,6 +135,7 @@ export function actualizarColor(id,objCambios) {//{r,g,b}
     });
      
 }
+
 
 
 
