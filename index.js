@@ -7,13 +7,23 @@ import express from 'express';//“Voy a usar Express para crear un servidor”.
 import cors from 'cors';//“Voy a usar CORS para permitir que el frontend (que corre en otro puerto) pueda comunicarse con este servidor sin problemas de seguridad.”    
 import {leerColores,crearColor,borrarColor,actualizarColor} from "./db.js";//“Voy a usar estas cuatro funciones que están en el archivo db.js para interactuar con la base de datos”.
 
+function verificar(peticion,respuesta,siguiente) {
+    respuesta.sendStatus(403);//prohibido, no autorizado
+}
+
 const servidor = express();//“Crea el servidor expres"
 
 servidor.use(cors());//“Servidor, usa CORS para permitir peticiones desde otros orígenes (como el frontend que corre en otro puerto).”  
 
 servidor.use( express.json());//esto convierte tenxo json que viene del front en objeto js
 
-//servidor.use( express.static("./front"));// “Servidor, también sirve los archivos que estén en la carpeta 'front' cuando alguien los pida.”, con express.static ya puedes meterte en localhost:3000 y puedes ver el html
+//servidor.use( express.static("./front"));
+
+servidor.post("/login", async (peticion,respuesta) => {
+    respuesta.send("...a validar")
+
+});
+servidor.use(verificar);
 
 //primera ruta:“Cuando alguien pida /colores, el servidor va a ejecutar este código.”
 servidor.get("/colores", async (peticion,respuesta) => {
@@ -40,7 +50,7 @@ servidor.post("/nuevo", async (peticion,respuesta) => {//“quiero añadir un co
         respuesta.json({id});//“Luego, responde al navegador con el id del nuevo color en formato JSON.”
 
     } catch(e) {
-        respuesta.status(500);//“Dile al navegador que hubo un error en el servidor (código 500).”
+        respuesta.status(500);
 
         respuesta.json({ error: "error en la base de datos" });//“Y responde con un mensaje de error en formato JSON.”
     }  
