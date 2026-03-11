@@ -9,8 +9,26 @@ import bcrypt from "bcrypt";//“Voy a usar bcrypt para encriptar las contraseñ
 import jwt from "jsonwebtoken";//“Voy a usar jsonwebtoken para crear tokens de autenticación que el frontend pueda usar para acceder a rutas protegidas en el backend.”
 import {leerColores,crearColor,borrarColor,actualizarColor,buscarUsuario} from "./db.js";//“Voy a usar estas cuatro funciones que están en el archivo db.js para interactuar con la base de datos”.
 
-function verificar(peticion,respuesta,siguiente) {
-    respuesta.sendStatus(403);//prohibido, no autorizado
+async function verificar(peticion,respuesta,siguiente) {
+    if(!peticion.headers.authorization){
+        return respuesta.sendStatus(403);
+    }
+
+    let [,token] = peticion.headers.authorization.split(" ");//el token viene en el header de la petición, con el formato "Bearer token
+
+    try{
+
+        let datos = await jwt.verify(token,process.env.SECRET);
+
+        peticion.usuario = datos.id;
+
+        siguiente();
+
+    }catch(e){
+        respuesta.sendstatus(403);
+        
+    }
+    
 }
 
 const servidor = express();//“Crea el servidor expres"
@@ -25,7 +43,7 @@ servidor.post("/login", async (peticion,respuesta) => {
     let {usuario,password} = peticion.body;
 
     if(!usuario || !usuario.trim() || !password || !password.trim()){
-        return respuesta.status(403);
+        return respuesta.sendStatus(403);
     }
     try{
         let posibleUsuario = await buscarUsuario(usuario);
@@ -53,7 +71,7 @@ servidor.use(verificar);
 servidor.get("/colores", async (peticion,respuesta) => {
 
     try {//“Intenta hacer esto:”
-        let colores = await leerColores();//Usa la función leerColores para obtener la lista de colores de db.js y la guarda en la variable colores,con await: “Espera aquí hasta que la base de datos responda.”La respuesta me la da el return new promise de db.js
+        let colores = await leerColores(peticion.usuario);//Usa la función leerColores para obtener la lista de colores de db.js y la guarda en la variable colores,con await: “Espera aquí hasta que la base de datos responda.”La respuesta me la da el return new promise de db.js
 
         respuesta.json(colores);//“Luego, responde al navegador con esa lista de colores en formato JSON.”
 
@@ -67,9 +85,10 @@ servidor.get("/colores", async (peticion,respuesta) => {
 servidor.post("/nuevo", async (peticion,respuesta) => {//“quiero añadir un color nuevo
 
   try {
-        let id = await crearColor(peticion.body);//“Usa la función crearColor para guardar el nuevo color que viene en el cuerpo de la petición (peticion.body) y espera a que termine, guardando el id del nuevo color en la variable id. Peticion.body contiene los datos que manda el fronted,express.json() se encarga de convertir esos datos a un objeto de JavaScript que se puede usar en el código.”
+        let {r,g,b} = peticion.body;
+        let usuario = peticion.usuario;
 
-        //El frontend manda el color en el body → el backend lo recibe en peticion.body → lo guarda en Mongo → devuelve el id con respuesta.json.
+        let id = await crearColor({r,g,b,usuario});
 
         respuesta.json({id});//“Luego, responde al navegador con el id del nuevo color en formato JSON.”
 
@@ -83,7 +102,7 @@ servidor.post("/nuevo", async (peticion,respuesta) => {//“quiero añadir un co
 servidor.delete("/borrar/:id", async (peticion, respuesta,siguiente) => {//“quiero borrar un color por su id, el id viene como parte de la URL, por eso usamos :id para decir que es una variable.”
 
     try {
-        let cantidad =  await borrarColor(peticion.params.id);// El id se envía desde el frontend cuando se hace: fetch(`/borrar/${this.id}`)Cuando la petición llega al backend, Express detecta ":id" y automáticamente guarda ese valor en peticion.params.id. Después ese id se envía a la función borrarColor, donde se convierte aObjectId para que MongoDB pueda reconocerlo correctamente.
+        let cantidad =  await borrarColor(peticion.params.id,peticion.usuario);// El id se envía desde el frontend cuando se hace: fetch(`/borrar/${this.id}`)Cuando la petición llega al backend, Express detecta ":id" y automáticamente guarda ese valor en peticion.params.id. Después ese id se envía a la función borrarColor, donde se convierte aObjectId para que MongoDB pueda reconocerlo correctamente.
  //La variable cantidad NO guarda el id, sino la respuesta de Mongo,
 // indicando cuántos documentos se borraron (1 si se borró, 0 si no existía).
         
@@ -108,7 +127,7 @@ servidor.delete("/borrar/:id", async (peticion, respuesta,siguiente) => {//“qu
 servidor.patch("/actualizar/:id", async (peticion, respuesta,siguiente) => {
 
     try {
-        let {existe,cambio} =  await actualizarColor(peticion.params.id,peticion.body);
+        let {existe,cambio} =  await actualizarColor(peticion.params.id,peticion.body,peticion.usuario);
 
         if(cambio){
             return respuesta.sendStatus(204);

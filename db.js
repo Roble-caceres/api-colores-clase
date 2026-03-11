@@ -42,7 +42,7 @@ export function buscarUsuario(nombreUsuario) {
 //colores
 
 //leerColores obtiene todos los colores guardados en la base de datos y los devuelve al backend.
-export function leerColores() {//leercolores esta conectada con index.js
+export function leerColores(idUsuario) {//leercolores esta conectada con index.js
     return new Promise( (ok, ko) => {//lo que reciba de esta promesa lo devuelve a await leerColores de index.js
         let conexion = null;// La declaramos fuera del .then() y en null para poder usarla luego en .finally() y cerrarla
          conectar()//ejecutamos conectar,la promesa se crea en Mongo.client.connect()
@@ -51,7 +51,7 @@ export function leerColores() {//leercolores esta conectada con index.js
                              //objConexion es el resultado que devuelve
             let coleccion = conexion.db("colores").collection("colores");//Entra en la base de datos "colores" y luego en la colección "colores".
 
-            return coleccion.find({}).toArray();//Busca todos los documentos de la colección y los devuelve en forma de array,ls llaves vacias significa no pongas ningun filtro devuelve todos los documentos y eso devuelve una promesa que cuando termine contiene el array de colores
+            return coleccion.find({ usuario : idUsuario }).toArray();//Busca todos los documentos de la colección y los devuelve en forma de array,ls llaves vacias significa no pongas ningun filtro devuelve todos los documentos y eso devuelve una promesa que cuando termine contiene el array de colores
         })
         .then( colores => {
             ok(colores);//el await de index.js recibe el ok que llega aqui
@@ -64,7 +64,7 @@ export function leerColores() {//leercolores esta conectada con index.js
         });
     });
 }
-export function crearColor(objColor) {//{r,g,b}
+export function crearColor(objColor) {//{r,g,b,usuario}
     return new Promise( (ok, ko) => {
         let conexion = null;
         conectar()
@@ -86,7 +86,7 @@ export function crearColor(objColor) {//{r,g,b}
         });
     });
 }
-export function borrarColor(id) {
+export function borrarColor(idColor,idUsuario) {//{r,g,b}   
     return new Promise((ok, ko) => {
         let conexion = null;
         conectar()
@@ -95,7 +95,7 @@ export function borrarColor(id) {
 
             let coleccion = conexion.db("colores").collection("colores");
 
-            return coleccion.deleteOne({_id : new ObjectId(id)});
+            return coleccion.deleteOne({_id : new ObjectId(idColor),usuario : idUsuario});
         })
         .then(({ deletedCount}) => {
          ok(deletedCount);
@@ -109,7 +109,7 @@ export function borrarColor(id) {
     });
      
 }
-export function actualizarColor(id,objCambios) {//{r,g,b}
+export function actualizarColor(id,objCambios,idUsuario) {//{r,g,b}
     return new Promise((ok, ko) => {
         let conexion = null;
         conectar()
@@ -118,9 +118,9 @@ export function actualizarColor(id,objCambios) {//{r,g,b}
 
             let coleccion = conexion.db("colores").collection("colores");
 
-            return coleccion.updateOne({_id : new ObjectId(id)},{$set : objCambios});
+            return coleccion.updateOne({_id : new ObjectId(id),usuario : idUsuario},{$set : objCambios});
         })
-        .then(({modifiedCount,matchedCount}) => {
+        .then(({modifiedCount,matchedCount}) => { 
          ok({
             existe : matchedCount,
             cambio : modifiedCount
@@ -135,7 +135,6 @@ export function actualizarColor(id,objCambios) {//{r,g,b}
     });
      
 }
-
 
 
 
