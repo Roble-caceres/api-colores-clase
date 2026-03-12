@@ -25,7 +25,7 @@ async function verificar(peticion,respuesta,siguiente) {
         siguiente();
 
     }catch(e){
-        respuesta.sendstatus(403);
+        respuesta.sendStatus(403);
         
     }
     
@@ -50,7 +50,7 @@ servidor.post("/login", async (peticion,respuesta) => {
 
         if(!posibleUsuario){
             return respuesta.sendStatus(403);
-        }7
+        }
         let coincide = await bcrypt.compare(password,posibleUsuario.password);
 
         if(!coincide){
